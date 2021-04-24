@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>R: Filter Fastq files</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body>
+
+<table width="100%" summary="page for filterSeqs {MIPSAlign}"><tr><td>filterSeqs {MIPSAlign}</td><td style="text-align: right;">R Documentation</td></tr></table>
+
+<h2>Filter Fastq files</h2>
+
+<h3>Description</h3>
+
+<p>Performs a variety of filtering steps to clean Fastq files
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+filterSeqs(
+  fileDir = getwd(),
+  leftPattern = "",
+  rightPattern = "",
+  minLen = 20,
+  trimTo = 40,
+  numCores = 1
+)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>fileDir</code></td>
+<td>
+<p>The file directory with Fastq files, default is current working directory</p>
+</td></tr>
+<tr valign="top"><td><code>leftPattern</code></td>
+<td>
+<p>The 3' adapter to trim sequences by</p>
+</td></tr>
+<tr valign="top"><td><code>rightPattern</code></td>
+<td>
+<p>The 5' adapter to trim sequences by</p>
+</td></tr>
+<tr valign="top"><td><code>minLen</code></td>
+<td>
+<p>All sequences below this minimum length requirement are filtered out</p>
+</td></tr>
+<tr valign="top"><td><code>trimTo</code></td>
+<td>
+<p>Trims all reads to desired length (determined by the length of the longest sequence)</p>
+</td></tr>
+<tr valign="top"><td><code>numCores</code></td>
+<td>
+<p>The number of cores to run on</p>
+</td></tr>
+</table>
+
+
+<h3>Examples</h3>
+
+<pre>
+filterSeqs(trimTo = 30)
+</pre>
+
+<hr /><div style="text-align: center;">[Package <em>MIPSAlign</em> version 0.0.0.9000 <a href="00Index.html">Index</a>]</div>
+</body></html>
