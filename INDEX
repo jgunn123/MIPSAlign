@@ -1,8 +1,0 @@
-MIPSAlign               MIPSAlign trimmer and aligner
-ReadFasta               Read-in Fasta
-WriteFasta              Write Fasta file
-bt2Align                Bowtie2 aligner
-btAlign                 Bowtie aligner
-btToCounts              Convert bowtie output
-filterSeqs              Filter Fastq files
-matchAlign              Perfect match aligner
