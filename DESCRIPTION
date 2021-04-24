@@ -1,0 +1,33 @@
+Package: MIPSAlign
+Title: NGS Alignment Tool
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Jonathan",
+           family = "Gunn",
+           role = c("aut", "cre"),
+           email = "jgunn5@jhu.edu",
+           comment = c(ORCID = "0000-0002-3914-1690"))
+Description: Many things
+Depends: R (>=
+        4.0.2),data.table,dplyr,tidyverse,doSNOW,FastqCleaner,Rbowtie2,Rsamtools,R.utils,ShortRead
+Imports: QuasR
+License: use_mit_license()
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+RemoteType: github
+RemoteHost: api.github.com
+RemoteRepo: MIPSAlign
+RemoteUsername: jgunn123
+RemoteRef: HEAD
+RemoteSha: d6ffcb30dc716b06c3e15d2fe064de8033c3728b
+GithubRepo: MIPSAlign
+GithubUsername: jgunn123
+GithubRef: HEAD
+GithubSHA1: d6ffcb30dc716b06c3e15d2fe064de8033c3728b
+NeedsCompilation: no
+Packaged: 2021-04-24 19:09:22 UTC; 13107
+Author: Jonathan Gunn [aut, cre] (<https://orcid.org/0000-0002-3914-1690>)
+Maintainer: Jonathan Gunn <jgunn5@jhu.edu>
+Built: R 4.0.5; ; 2021-04-24 19:09:22 UTC; windows
