@@ -5,15 +5,16 @@
 \title{Bowtie Aligner}
 \usage{
 btAlign(
-  seqData = list.files(pattern = "*.fastq.gz$"),
-  orfLib = list.files(pattern = "*.fa$|*.fasta$")[[1]],
+  seqData = getwd(),
+  orfLib = list.files(pattern = "*.fa$|*.fasta$", full.names = TRUE),
+  aligner = c("btAlign", "SpliceMap"),
   numCores = 1,
   keepFiles = FALSE,
   options = NULL
 )
 }
 \arguments{
-\item{seqData}{The list of Fastq files you want to align}
+\item{seqData}{The  directory where Fastq files are located}
 
 \item{orfLib}{The reference Fasta alignment file}
 

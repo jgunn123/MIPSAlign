@@ -13,7 +13,7 @@ bt2Align(
 )
 }
 \arguments{
-\item{seqData}{The list of Fastq files you want to align}
+\item{seqData}{The  directory where Fastq files are located}
 
 \item{orfLib}{The reference Fasta alignment file}
 

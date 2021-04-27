@@ -4,7 +4,11 @@
 \alias{matchAlign}
 \title{Perfect Match Aligner}
 \usage{
-matchAlign(seqData = list.files(pattern = "*.fastq.gz$"), orfLib, numCores = 1)
+matchAlign(
+  seqData = list.files(pattern = "*.fastq.gz$", full.names = TRUE),
+  orfLib = list.files(pattern = "*.fa|.fasta", full.names = TRUE),
+  numCores = 1
+)
 }
 \arguments{
 \item{seqData}{The list of Fastq files you want to align}
