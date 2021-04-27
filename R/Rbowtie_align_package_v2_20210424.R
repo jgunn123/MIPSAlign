@@ -439,6 +439,7 @@ MIPSAlign <- function(fileDir = getwd(),
   if("matchAlign" %in% aligner) {
 
     output <- matchAlign(seqData = gzFiles,orfLib = refFile,numCores = numCores)
+    print("All done!")
     return(output)
   }
 
