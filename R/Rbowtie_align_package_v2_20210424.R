@@ -61,7 +61,7 @@ filterSeqs <- function(fileDir = getwd(),
   if(numCores > parallel::detectCores()) numCores <- parallel::detectCores()
 
   closeAllConnections()
-  cl <- parallel::makeCluster(numCores,outfile = "filterSeqs.out")
+  cl <- parallel::makeCluster(numCores,outfile = paste(newDir,"filterSeqs.out",sep = "/"))
   doSNOW::registerDoSNOW(cl)
   on.exit(parallel::stopCluster(cl))
 
@@ -74,8 +74,9 @@ filterSeqs <- function(fileDir = getwd(),
                    .packages = c("ShortRead","FastqCleaner"),
                    .options.snow = opts) %dopar% {
 
-    stream <- ShortRead::FastqStreamer(file)
-    newName <- paste(sub(".fastq.gz","",file),"trunc.fastq.gz",sep = "_")
+    stream <- ShortRead::FastqStreamer(paste(fileDir,file,sep = "/"))
+    newName <- paste(newDir,file,sep = "/")
+    newName <- paste(sub(".fastq.gz","",newName),"trunc.fastq.gz",sep = "_")
 
     repeat {
 
@@ -89,7 +90,7 @@ filterSeqs <- function(fileDir = getwd(),
                                          error_rate = 0,
                                          anchored = FALSE)
       fq <- fq[ShortRead::width(fq) >= minLen]
-      ShortRead::writeFastq(fq,paste(newDir,newName,sep = "/"),"a")
+      ShortRead::writeFastq(fq,newName,"a")
     }
   }
 
@@ -108,7 +109,7 @@ filterSeqs <- function(fileDir = getwd(),
 
 btToCounts <- function(df) {
 
-  f6 <- function(X) {as.data.frame(data.table::data.table(X)[,.N,keyby = X])}
+  f6 <- function(X) as.data.frame(data.table::data.table(X)[,.N,keyby = X])
   test <- df %>% dplyr::select(rname) %>% f6
   perf <- df %>% dplyr::filter(NM == 0 & flag != 16) %>% dplyr::select(rname) %>% f6
   imperf <- df %>% dplyr::filter(NM != 0 & flag != 16) %>% dplyr::select(rname) %>% f6
@@ -133,20 +134,23 @@ btToCounts <- function(df) {
 #' x <- matchAlign(orfLib = fastaFileName,numCores = 6)
 #' @export
 
-matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
-                       orfLib,
+matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$",full.names = TRUE),
+                       orfLib = list.files(pattern = "*.fa|.fasta",full.names = TRUE),
                        numCores = 1) {
 
   startTime <- Sys.time()
 
+  gzFiles <- list.files(path = seqData,pattern = "*.fastq.gz$",full.names = TRUE)
+
   fasta <- ReadFasta(orfLib)
-  name <- sub(".fastq.gz","",seqData)
+  name <- sub(".*/","",gzFiles)
+  name <- sub(".fastq.gz","",name)
   name <- sub("_trunc","",name)
 
   if(numCores > parallel::detectCores()) numCores <- parallel::detectCores()
 
   closeAllConnections()
-  cl <- parallel::makeCluster(numCores,outfile = "matchAlign.out")
+  cl <- parallel::makeCluster(numCores,outfile = paste(seqData,"matchAlign.out",sep = "/"))
   doSNOW::registerDoSNOW(cl)
   on.exit(parallel::stopCluster(cl))
 
@@ -155,12 +159,12 @@ matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
   progress <- function(n) setTxtProgressBar(pb,n)
   opts <- list(progress = progress)
 
-  aligner = foreach::foreach(i = 1:length(seqData),
+  aligner = foreach::foreach(file = gzFiles,
                              .combine = cbind,
                              .packages = c("ShortRead","data.table"),
                              .options.snow = opts) %dopar% {
 
-    seqs <- as.character(ShortRead::sread(ShortRead::readFastq(seqData[i])))
+    seqs <- as.character(ShortRead::sread(ShortRead::readFastq(file)))
     seqs <- c(seqs,fasta$sequence)
     alignment <- data.table::data.table(seqs)[,.N,keyby = seqs]
     unaligned <- alignment[!which(as.character(unlist(alignment[,1])) %in% as.character(unlist(fasta$sequence))),]
@@ -171,7 +175,7 @@ matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
     if(nrow(unaligned) < 50) {
 
       numRows <- nrow(unaligned)
-      unaligned[(numRows+1):50,1] <- paste(seqData[i],NA,(numRows+1):50,sep = "_")
+      unaligned[(numRows+1):50,1] <- paste(file,NA,(numRows+1):50,sep = "_")
       unaligned[(numRows+1):50,2] <- 0
     }
 
@@ -209,7 +213,7 @@ matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
 #' Bowtie Aligner
 #'
 #' Generates counts using the original bowtie algorithm
-#' @param seqData The list of Fastq files you want to align
+#' @param seqData The  directory where Fastq files are located
 #' @param orfLib The reference Fasta alignment file
 #' @param numCores The number of cores to run on
 #' @param keepFiles TRUE or FALSE, whether you want to keep the bowtie output files
@@ -219,45 +223,54 @@ matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
 #' x <- btAlign(orfLib = fastaFileName,numCores = 6)
 #' @export
 
-btAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
-                    orfLib = list.files(pattern = "*.fa$|*.fasta$")[[1]],
+btAlign <- function(seqData = getwd(),
+                    orfLib = list.files(pattern = "*.fa$|*.fasta$",full.names = TRUE),
+                    aligner = c("btAlign","SpliceMap"),
                     numCores = 1,
                     keepFiles = FALSE,
                     options = NULL) {
 
   startTime <- Sys.time()
 
-  tsvFileName <- "nameRef.tsv"
-  name <- sub(".fastq.gz","",seqData)
+  tsvFileName <- paste(seqData,"nameRef.tsv",sep = "/")
+  gzFiles <- list.files(path = seqData,pattern = "*.fastq.gz$",full.names = TRUE)
+  name <- sub(".*/","",gzFiles)
+  name <- sub(".fastq.gz","",name)
   name <- sub("_trunc","",name)
-  tsvFile <- data.frame(FileName = seqData)
+  tsvFile <- data.frame(FileName = gzFiles)
   tsvFile$SampleName <- as.character(name)
   write.table(as.data.frame(tsvFile),tsvFileName,quote = FALSE, sep = "\t", row.names = FALSE)
+
+  if(aligner == "btAlign") aligner <- "Rbowtie"
 
   if(numCores > 3) numCores <- 3
 
   closeAllConnections()
-  cl <- parallel::makeCluster(numCores,outfile = "btAlign.out")
+  cl <- parallel::makeCluster(numCores,outfile = paste(seqData,"btAlign.out",sep = "/"))
   doSNOW::registerDoSNOW(cl)
   on.exit(parallel::stopCluster(cl))
 
-  QuasR::qAlign(tsvFileName,orfLib,alignmentParameter = options,clObj = cl)
+  QuasR::qAlign(sampleFile = tsvFileName,
+                genome = orfLib,
+                alignmentParameter = options,
+                clObj = cl)
 
-  outBam <- list.files(pattern = "*.bam$")
+  outBam <- list.files(path = seqData,pattern = ".bam$",full.names = TRUE)
   p <- Rsamtools::ScanBamParam(what = c("qname","flag","rname","strand","qwidth","mapq","seq"),tag = "NM")
   seqs <- as.character(ShortRead::id(ShortRead::readFasta(orfLib)))
   bView <- list()
 
   for(i in 1:length(outBam)) {
 
-    checkFlag <- as.data.frame(Rsamtools::scanBam(outBam[[i]],param = Rsamtools::ScanBamParam(what = c("qname","flag"))))
+    checkFlag <- as.data.frame(Rsamtools::scanBam(outBam[[i]],param = Rsamtools::ScanBamParam(what = c("qname","flag","seq"))))
 
     if(all(checkFlag$flag == 4)) {
 
       bViewNew <- data.frame(matrix(nrow = nrow(checkFlag),ncol = 8))
-      colnames(bViewNew) <-c("qname","flag","rname","strand","qwidth","mapq","seq","NM")
+      colnames(bViewNew) <- c("qname","flag","rname","strand","qwidth","mapq","seq","NM")
       bViewNew$qname <- checkFlag$qname
       bViewNew$flag <- checkFlag$flag
+      bViewNew$seq <- checkFlag$seq
       bView <- c(bView,list(bViewNew))
     }
     else {
@@ -267,11 +280,11 @@ btAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
 
   if(keepFiles == FALSE) {
 
-    unlink(grep(strsplit(orfLib,"*.fa$"),list.dirs(),value = TRUE),recursive = T)
-    txtFiles <- grep("QuasR",list.files(pattern = "*.txt$"),value = TRUE)
-    bamFiles <- grep(paste(name,collapse = "|"),list.files(pattern = "*.bam"),value = TRUE)
-    faiFiles <- grep(orfLib,list.files(pattern = "*.fai$"),value = TRUE)
-    md5Files <- grep(orfLib,list.files(pattern = "*.md5$"),value = TRUE)
+    unlink(grep(sub(".*/","",orfLib),list.dirs(path = paste(seqData,"..",sep = "/")),value = TRUE),recursive = T)
+    txtFiles <- grep("QuasR",list.files(pattern = "*.txt$",full.names= TRUE),value = TRUE)
+    bamFiles <- grep(paste(name,collapse = "|"),list.files(path = seqData,pattern = "*.bam",full.names = TRUE),value = TRUE)
+    faiFiles <- grep(sub(".*/","",orfLib),list.files(path = paste(seqData,"..",sep = "/"),pattern = "*.fai$",full.names = TRUE),value = TRUE)
+    md5Files <- grep(sub(".*/","",orfLib),list.files(path = paste(seqData,"..",sep = "/"),pattern = "*.md5$",full.names = TRUE),value = TRUE)
     file.remove(c(txtFiles,bamFiles,faiFiles,md5Files,tsvFileName))
   }
 
@@ -284,7 +297,7 @@ btAlign <- function(seqData = list.files(pattern = "*.fastq.gz$"),
 #' Bowtie2 Aligner
 #'
 #' Generates counts using the bowtie2 algorithm
-#' @param seqData The list of Fastq files you want to align
+#' @param seqData The  directory where Fastq files are located
 #' @param orfLib The reference Fasta alignment file
 #' @param numCores The number of cores to run on
 #' @param keepFiles TRUE or FALSE, whether you want to keep the bowtie output files
@@ -303,13 +316,14 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
   startTime <- Sys.time()
 
   gzFile <- FALSE
+  gzFiles <- list.files(path = seqData,pattern = "*.fastq.gz$",full.names = TRUE)
 
   bView <- list()
 
   if(numCores > parallel::detectCores()) numCores <- parallel::detectCores()
 
   closeAllConnections()
-  cl <- parallel::makeCluster(numCores,outfile = "bt2Align.out")
+  cl <- parallel::makeCluster(numCores,outfile = paste(seqData,"bt2Align.out",sep = "/"))
   doSNOW::registerDoSNOW(cl)
   on.exit(parallel::stopCluster(cl))
 
@@ -318,21 +332,20 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
   progress <- function(n) setTxtProgressBar(pb,n)
   opts <- list(progress = progress)
 
-  bt2Out <- foreach::foreach(i = 1:length(seqData),
+  bt2Out <- foreach::foreach(file = gzFiles,
                              .combine = c,
                              .packages = c("ShortRead","Rbowtie2","Rsamtools","R.utils"),
                              .options.snow = opts) %dopar% {
 
-    file <- seqData[i]
-    if(grepl(".gz",file.path(file))) {
+    if(grepl(".gz$",file)) {
 
-      fqFile <- sub(".gz","",file)
+      fqFile <- sub(".gz$","",file)
       file.remove(fqFile)
       ShortRead::writeFastq(ShortRead::readFastq(file),fqFile,compress = FALSE)
       file <- fqFile
       gzFile <- TRUE
     }
-    else if(!grepl("*.fastq$",file.path(file)) & !grepl("*.fq$",file.path(file)) & !grepl("-f",options)) {
+    else if(!grepl(".fastq$",file) & !grepl(".fq$",file) & !grepl("-f",options)) {
 
       print("Please check your sequencing file is in the FASTQ format, or specify in options as such!")
       return()
@@ -350,10 +363,10 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
                                    options = paste(options,"-t"),
                                    overwrite = TRUE)
 
-    Rsamtools::asBam(outSam,destination = paste(idx,"alignment",sep = "_"),overwrite = TRUE)
+    Rsamtools::asBam(outSam,destination = sub(".bam$","",outBam),overwrite = TRUE)
     p <- Rsamtools::ScanBamParam(what = c("qname","flag","rname","strand","qwidth","mapq","seq"),tag = "NM")
 
-    checkFlag <- as.data.frame(Rsamtools::scanBam(outBam,param = Rsamtools::ScanBamParam(what = c("qname","flag"))))
+    checkFlag <- as.data.frame(Rsamtools::scanBam(outBam,param = Rsamtools::ScanBamParam(what = c("qname","flag","seq"))))
 
     if(all(checkFlag$flag == 4)) {
 
@@ -361,19 +374,21 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
       colnames(bViewNew) <-c("qname","flag","rname","strand","qwidth","mapq","seq","NM")
       bViewNew$qname <- checkFlag$qname
       bViewNew$flag <- checkFlag$flag
+      bViewNew$seq <- checkFlag$seq
       bView <- bViewNew
     }
     else {
       bView <- as.data.frame(Rsamtools::scanBam(outBam,param = p))
     }
 
+    idx <- sub(".*/","",idx)
     if (keepFiles == FALSE) {
 
       if (gzFile == TRUE) file.remove(file)
 
-      bt2Files <- grep(idx,list.files(pattern = "*.bt2"),value = TRUE)
-      samFile <- grep(idx,list.files(pattern = "*.sam$"),value = TRUE)
-      bamFiles <- grep(idx,list.files(pattern = "*.bam"),value = TRUE)
+      bt2Files <- grep(idx,list.files(path = seqData,pattern = ".bt2",full.names = TRUE),value = TRUE)
+      samFile <- grep(idx,list.files(path = seqData,pattern = ".sam$",full.names = TRUE),value = TRUE)
+      bamFiles <- grep(idx,list.files(path = seqData,pattern = ".bam",full.names = TRUE),value = TRUE)
       file.remove(c(bt2Files,samFile,bamFiles))
     }
     return(list(bView))
@@ -405,7 +420,7 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
 #' @export
 
 MIPSAlign <- function(fileDir = getwd(),
-                      refFile,
+                      refFile = list.files(pattern = ".fa|.fasta",full.names = TRUE),
                       filter = FALSE,
                       leftPattern = "",
                       rightPattern = "",
@@ -430,18 +445,34 @@ MIPSAlign <- function(fileDir = getwd(),
     print("Finished trimming files...")
 
     fileDir <- paste(fileDir,"filteredSeqs",sep = "/")
-    file.copy(refFile,fileDir)
-    setwd(fileDir)
   }
-
-  gzFiles <- list.files(path = fileDir,pattern = "*.fastq.gz$")
 
   if("matchAlign" %in% aligner) {
 
-    output <- matchAlign(seqData = gzFiles,orfLib = refFile,numCores = numCores)
+    output <- matchAlign(seqData = fileDir,orfLib = refFile,numCores = numCores)
     print("All done!")
     return(output)
   }
+
+  else if(aligner == "btAlign"|aligner == "SpliceMap") {
+
+    btOut <- btAlign(seqData = fileDir,
+                     orfLib = refFile,
+                     aligner = aligner,
+                     numCores = numCores,
+                     keepFiles = keepFiles,
+                     options =  options)
+  }
+  else {
+
+    btOut <- bt2Align(seqData = fileDir,
+                      orfLib = refFile,
+                      numCores = numCores,
+                      keepFiles = keepFiles,
+                      options =  options)
+  }
+
+  gzFiles <- list.files(path = fileDir,pattern = ".fastq.gz$",full.names = TRUE)
 
   fasta_names <- ReadFasta(refFile)
 
@@ -454,31 +485,15 @@ MIPSAlign <- function(fileDir = getwd(),
 
   unaligned_counts <- data.frame(matrix(ncol = 1, nrow = 1))
 
-  if(aligner == "btAlign") {
-
-    btOut <- btAlign(seqData = gzFiles,
-                     orfLib = refFile,
-                     numCores = numCores,
-                     keepFiles = keepFiles,
-                     options =  options)
-  }
-  else {
-
-    btOut <- bt2Align(seqData = gzFiles,
-                      orfLib = refFile,
-                      numCores = numCores,
-                      keepFiles = keepFiles,
-                      options =  options)
-  }
-
   for(i in 1:length(btOut)) {
 
     countsOut <- btToCounts(btOut[[i]])
     alignOut <- countsOut[[1]]
     unalignedSeqs <- countsOut[[2]]
     alignOut$rname <- as.character(alignOut$rname)
-    name <- sub(".fastq.gz","",gzFiles[[i]])
-    name <- sub("_trunc","",gzFiles[[i]])
+    name <- sub(".*/","",gzFiles[[i]])
+    name <- sub(".fastq.gz","",name)
+    name <- sub("_trunc","",name)
     unaligned_counts[name] <- alignOut[1,2]
 
     total_imperf_counts <- dplyr::select(alignOut, rname, total_counts, imperf_counts)
@@ -507,6 +522,13 @@ MIPSAlign <- function(fileDir = getwd(),
 
   unaligned_seqs <- unaligned_seqs[-1, ]
   unaligned_seqs[is.na(unaligned_seqs)] <- 0
+
+  data.table::fwrite(counts,file = paste(fileDir,"counts.csv",sep = "/"),row.names = FALSE)
+  data.table::fwrite(unaligned_seqs,file = paste(fileDir,"unaligned.csv",sep = "/"),row.names = FALSE)
+
+  if(!("matchAlign" %in% aligner)) {
+    data.table::fwrite(imperf_counts,file = paste(fileDir,"imperfCounts.csv",sep = "/"),row.names = FALSE)
+  }
 
   endTime <- Sys.time()
   print(endTime - startTime)

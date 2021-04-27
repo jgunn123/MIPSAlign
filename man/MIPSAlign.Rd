@@ -6,7 +6,7 @@
 \usage{
 MIPSAlign(
   fileDir = getwd(),
-  refFile,
+  refFile = list.files(pattern = ".fa|.fasta", full.names = TRUE),
   filter = FALSE,
   leftPattern = "",
   rightPattern = "",
