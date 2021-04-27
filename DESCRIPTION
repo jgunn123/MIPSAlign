@@ -8,12 +8,11 @@ Authors@R:
            email = "jgunn5@jhu.edu",
            comment = c(ORCID = "0000-0002-3914-1690"))
 Description: Many things
-License: use_mit_license()
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
-NeedsCompilation: no
 Depends:
 	R (>= 4.0.2),
 	foreach,

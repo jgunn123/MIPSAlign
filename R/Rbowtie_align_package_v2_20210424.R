@@ -450,6 +450,15 @@ MIPSAlign <- function(fileDir = getwd(),
   if("matchAlign" %in% aligner) {
 
     output <- matchAlign(seqData = fileDir,orfLib = refFile,numCores = numCores)
+
+    counts <- output[[1]]
+    unaligned_seqs <- output[[2]]
+
+    data.table::fwrite(counts,file = paste(fileDir,"counts.csv",sep = "/"),row.names = FALSE)
+    data.table::fwrite(unaligned_seqs,file = paste(fileDir,"unaligned.csv",sep = "/"),row.names = FALSE)
+
+    endTime <- Sys.time()
+    print(endTime - startTime)
     print("All done!")
     return(output)
   }
@@ -525,10 +534,7 @@ MIPSAlign <- function(fileDir = getwd(),
 
   data.table::fwrite(counts,file = paste(fileDir,"counts.csv",sep = "/"),row.names = FALSE)
   data.table::fwrite(unaligned_seqs,file = paste(fileDir,"unaligned.csv",sep = "/"),row.names = FALSE)
-
-  if(!("matchAlign" %in% aligner)) {
-    data.table::fwrite(imperf_counts,file = paste(fileDir,"imperfCounts.csv",sep = "/"),row.names = FALSE)
-  }
+  data.table::fwrite(imperf_counts,file = paste(fileDir,"imperfCounts.csv",sep = "/"),row.names = FALSE)
 
   endTime <- Sys.time()
   print(endTime - startTime)
