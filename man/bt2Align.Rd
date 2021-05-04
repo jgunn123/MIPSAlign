@@ -5,8 +5,8 @@
 \title{Bowtie2 Aligner}
 \usage{
 bt2Align(
-  seqData = list.files(pattern = "*.fastq.gz$"),
-  orfLib = list.files(pattern = "*.fa$|*.fasta$")[[1]],
+  seqData = getwd(),
+  orfLib = list.files(pattern = "*.fa$|*.fasta$", full.names = TRUE)[[1]],
   numCores = 1,
   keepFiles = FALSE,
   options = ""

@@ -134,8 +134,8 @@ btToCounts <- function(df) {
 #' x <- matchAlign(orfLib = fastaFileName,numCores = 6)
 #' @export
 
-matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$",full.names = TRUE),
-                       orfLib = list.files(pattern = "*.fa|.fasta",full.names = TRUE),
+matchAlign <- function(seqData = getwd(),
+                       orfLib = list.files(pattern = "*.fa$|.fasta$",full.names = TRUE)[[1]],
                        numCores = 1) {
 
   startTime <- Sys.time()
@@ -165,7 +165,7 @@ matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$",full.names =
                              .options.snow = opts) %dopar% {
 
     seqs <- as.character(ShortRead::sread(ShortRead::readFastq(file)))
-    seqs <- c(seqs,fasta$sequence)
+    seqs <- c(seqs,unique(fasta$sequence))
     alignment <- data.table::data.table(seqs)[,.N,keyby = seqs]
     unaligned <- alignment[!which(as.character(unlist(alignment[,1])) %in% as.character(unlist(fasta$sequence))),]
     sumUnalign <- sum(as.numeric(unaligned$N))
@@ -224,7 +224,7 @@ matchAlign <- function(seqData = list.files(pattern = "*.fastq.gz$",full.names =
 #' @export
 
 btAlign <- function(seqData = getwd(),
-                    orfLib = list.files(pattern = "*.fa$|*.fasta$",full.names = TRUE),
+                    orfLib = list.files(pattern = "*.fa$|*.fasta$",full.names = TRUE)[[1]],
                     aligner = c("btAlign","SpliceMap"),
                     numCores = 1,
                     keepFiles = FALSE,
@@ -241,7 +241,7 @@ btAlign <- function(seqData = getwd(),
   tsvFile$SampleName <- as.character(name)
   write.table(as.data.frame(tsvFile),tsvFileName,quote = FALSE, sep = "\t", row.names = FALSE)
 
-  if(aligner == "btAlign") aligner <- "Rbowtie"
+  if(aligner != "SpliceMap") aligner <- "Rbowtie"
 
   if(numCores > 3) numCores <- 3
 
@@ -307,8 +307,8 @@ btAlign <- function(seqData = getwd(),
 #' x <- bt2Align(orfLib = fastaFileName,numCores = 6)
 #' @export
 
-bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
-                     orfLib = list.files(pattern = "*.fa$|*.fasta$")[[1]],
+bt2Align <- function(seqData = getwd(),
+                     orfLib = list.files(pattern = "*.fa$|*.fasta$",full.names = TRUE)[[1]],
                      numCores = 1,
                      keepFiles = FALSE,
                      options = "") {
@@ -382,6 +382,7 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
     }
 
     idx <- sub(".*/","",idx)
+
     if (keepFiles == FALSE) {
 
       if (gzFile == TRUE) file.remove(file)
@@ -420,7 +421,7 @@ bt2Align <- function(seqData = list.files(pattern = "*.fastq.gz$"),
 #' @export
 
 MIPSAlign <- function(fileDir = getwd(),
-                      refFile = list.files(pattern = ".fa|.fasta",full.names = TRUE),
+                      refFile = list.files(pattern = "*.fa$|*.fasta$",full.names = TRUE)[[1]],
                       filter = FALSE,
                       leftPattern = "",
                       rightPattern = "",
@@ -442,7 +443,7 @@ MIPSAlign <- function(fileDir = getwd(),
                minLen = minLen,
                numCores = numCores)
 
-    print("Finished trimming files...")
+    print("Finished filtering files...")
 
     fileDir <- paste(fileDir,"filteredSeqs",sep = "/")
   }

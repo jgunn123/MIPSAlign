@@ -5,8 +5,8 @@
 \title{Perfect Match Aligner}
 \usage{
 matchAlign(
-  seqData = list.files(pattern = "*.fastq.gz$", full.names = TRUE),
-  orfLib = list.files(pattern = "*.fa|.fasta", full.names = TRUE),
+  seqData = getwd(),
+  orfLib = list.files(pattern = "*.fa$|.fasta$", full.names = TRUE)[[1]],
   numCores = 1
 )
 }

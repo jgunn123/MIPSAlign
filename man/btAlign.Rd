@@ -6,7 +6,7 @@
 \usage{
 btAlign(
   seqData = getwd(),
-  orfLib = list.files(pattern = "*.fa$|*.fasta$", full.names = TRUE),
+  orfLib = list.files(pattern = "*.fa$|*.fasta$", full.names = TRUE)[[1]],
   aligner = c("btAlign", "SpliceMap"),
   numCores = 1,
   keepFiles = FALSE,
