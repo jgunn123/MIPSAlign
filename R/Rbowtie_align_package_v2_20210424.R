@@ -164,7 +164,17 @@ matchAlign <- function(seqData = getwd(),
                              .packages = c("ShortRead","data.table"),
                              .options.snow = opts) %dopar% {
 
-    seqs <- as.character(ShortRead::sread(ShortRead::readFastq(file)))
+    seqs <- c()
+    stream <- open(ShortRead::FastqStreamer(file))
+    on.exit(close(stream))
+
+    repeat {
+      fq <- ShortRead::yield(stream)
+      if(length(fq) == 0) break
+      fq <- as.character(ShortRead::sread(fq))
+      seqs <- c(seqs,fq)
+    }
+
     seqs <- c(seqs,unique(fasta$sequence))
     alignment <- data.table::data.table(seqs)[,.N,keyby = seqs]
     unaligned <- alignment[!which(as.character(unlist(alignment[,1])) %in% as.character(unlist(fasta$sequence))),]
@@ -339,9 +349,18 @@ bt2Align <- function(seqData = getwd(),
 
     if(grepl(".gz$",file)) {
 
+      stream <- open(ShortRead::FastqStreamer(file))
+      on.exit(close(stream))
+
       fqFile <- sub(".gz$","",file)
       file.remove(fqFile)
-      ShortRead::writeFastq(ShortRead::readFastq(file),fqFile,compress = FALSE)
+
+      repeat {
+        readIn <- yield(stream)
+        if(length(readIn) == 0) break
+        ShortRead::writeFastq(readIn,fqFile,"a",compress = FALSE)
+      }
+
       file <- fqFile
       gzFile <- TRUE
     }
