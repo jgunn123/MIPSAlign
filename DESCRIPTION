@@ -14,16 +14,16 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Depends:
-	foreach,
-	magrittr,
-	data.table
+	R (== 4.0.2)
+	foreach (== 1.5.1),
+	magrittr (== 2.0.1),
+	data.table (== 1.14.0)
 Imports:
-	data.table,
-	dplyr,
-	doSNOW,
-	FastqCleaner,
-	QuasR,
-	Rbowtie2,
-	Rsamtools,
-	R.utils,
-	ShortRead
+	dplyr (== 1.0.5),
+	doSNOW (== 1.0.19),
+	FastqCleaner (== 1.8.0),
+	QuasR (== 1.30.0),
+	Rbowtie2 (== 1.12.0),
+	Rsamtools (== 2.6.0),
+	R.utils (== 2.10.1),
+	ShortRead (== 1.48.0)
